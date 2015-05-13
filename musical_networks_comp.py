@@ -45,6 +45,7 @@ def musicalEdgeList(parts, properties, part_type="note"):
                 if "name" in properties:      attr.append(n.name)
                 if "nameOct" in properties:   attr.append(n.nameWithOctave)
                 if "duration" in properties:  attr.append(n.quarterLength)
+                if "freq" in properties:      attr.append(n.frequency)
                 
                 if len(attr) == 1:
                     reduced.append(attr[0])
@@ -58,34 +59,36 @@ def musicalEdgeList(parts, properties, part_type="note"):
     return edges
 
   
-def generateNetwork(edges, directed=False, weighted=True, (min_width, max_width)=(0.3,1)):
+def generateNetwork(edges, directed=False, weighted=True, (min_width, max_width)=(0.3,1), layout="spring"):
     if directed:
-        G = nx.DiGraph()
+        G = nx.DiGraph() # how to get nicer arrows for directed network?
     else:
         G = nx.Graph()
-        
+    
     max_occ = max(edges.itervalues())
     for key, value in edges.iteritems():
         (note1, note2) = key
         G.add_edge(note1, note2, weight=float(value)/max_occ)
     
-    # should make pos a param also
-    pos = nx.circular_layout(G)
+    if layout == "spring":
+        pos = nx.spring_layout(G, k=0.25, iterations=55)
+    elif layout == "circle":
+        pos = nx.circular_layout(G)
     
-    # draw edges -> width = min + (max-min)*weight
     for (u,v,d) in G.edges(data=True):
         nx.draw_networkx_edges(G, pos, [(u,v)], 
-            min_width + (max_width-min_width)*d['weight'])
+            min_width + (max_width - min_width) * d['weight'])
     nx.draw_networkx(G, pos, edgelist=[], with_labels=True, node_size=600)
+    
+    plt.savefig("bach_octave.png")
     plt.show()
-
 
 ############################################################################
 
-parts = scoreToParts("bach/bwv57.8")
+bach = scoreToParts("bach/bwv57.8")
 
-edges_min = musicalEdgeList(parts, ["name"])
-edges_max = musicalEdgeList(parts, ["nameOct", "duration"])
+edges_min = musicalEdgeList(bach, ["nameOct"])
+edges_max = musicalEdgeList(bach, ["nameOct", "duration"])
 
-generateNetwork(edges_min, False, True, (0.3,7))
+generateNetwork(edges_min, False, True, (0.3,16), layout="spring")
 #generateNetwork(edges_max, False, True, (0.3,7))
