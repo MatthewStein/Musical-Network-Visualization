@@ -42,12 +42,9 @@ def musicalEdgeList(parts, properties, part_type="note"):
                 n = part[i]
                 attr = []
                 
-                if "name" in properties:
-                    attr.append(n.name)
-                if "nameOct" in properties:
-                    attr.append(n.nameWithOctave)
-                if "duration" in properties:
-                    attr.append(n.quarterLength)
+                if "name" in properties:      attr.append(n.name)
+                if "nameOct" in properties:   attr.append(n.nameWithOctave)
+                if "duration" in properties:  attr.append(n.quarterLength)
                 
                 if len(attr) == 1:
                     reduced.append(attr[0])
@@ -59,10 +56,29 @@ def musicalEdgeList(parts, properties, part_type="note"):
             edges[edge] = edges.get(edge, 0) + 1
     
     return edges
-            
+
   
-def generateNetwork(edges, directed=False, weighted=True):
-  return 0
+def generateNetwork(edges, directed=False, weighted=True, (min_width, max_width)=(0.3,1)):
+    if directed:
+        G = nx.DiGraph()
+    else:
+        G = nx.Graph()
+        
+    max_occ = max(edges.itervalues())
+    for key, value in edges.iteritems():
+        (note1, note2) = key
+        G.add_edge(note1, note2, weight=float(value)/max_occ)
+    
+    # should make pos a param also
+    pos = nx.circular_layout(G)
+    
+    # draw edges -> width = min + (max-min)*weight
+    for (u,v,d) in G.edges(data=True):
+        nx.draw_networkx_edges(G, pos, [(u,v)], 
+            min_width + (max_width-min_width)*d['weight'])
+    nx.draw_networkx(G, pos, edgelist=[], with_labels=True, node_size=600)
+    plt.show()
+
 
 ############################################################################
 
@@ -71,33 +87,5 @@ parts = scoreToParts("bach/bwv57.8")
 edges_min = musicalEdgeList(parts, ["name"])
 edges_max = musicalEdgeList(parts, ["nameOct", "duration"])
 
-
-# MINIMAL NETWORK
-# should make into DiGraph()
-G_min = nx.Graph()
-max_occ = max(edges_min.itervalues())
-for key, value in edges_min.iteritems():
-    (note1, note2) = key
-    G_min.add_edge(note1, note2, weight=float(value)/max_occ)
-    
-pos=nx.circular_layout(G_min)
-#nx.draw_networkx_nodes(G_min, pos, with_labels=True, node_size=600)
-
-cutoff = 0.4
-elarge=[(u,v) for (u,v,d) in G_min.edges(data=True) if d['weight'] > cutoff]
-esmall=[(u,v) for (u,v,d) in G_min.edges(data=True) if d['weight'] <= cutoff]
-
-nx.draw_networkx_edges(G_min,pos,edgelist=elarge,width=3)
-nx.draw_networkx_edges(G_min,pos,edgelist=esmall,width=3,alpha=0.5,edge_color='b',style='dashed')
-nx.draw_networkx(G_min, pos, edgelist=[], with_labels=True, node_size=600)
-plt.show()
-
-
-# MAXIMAL NETWORK 
-G_max = nx.Graph()
-for key, value in edges_max.iteritems():
-    (note1, note2) = key
-    G_max.add_edge(note1, note2)
-    # also, value = weight
-#nx.draw(G_max)
-#plt.show()
+generateNetwork(edges_min, False, True, (0.3,7))
+#generateNetwork(edges_max, False, True, (0.3,7))
