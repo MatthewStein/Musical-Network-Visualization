@@ -6,44 +6,74 @@ from music21 import *
 import networkx as nx
 import matplotlib.pyplot as plt
 
-bach = corpus.parse('bach/bwv57.8')
+###############################################################
+# Convert a score in the Music21 corpus into a list of Parts, #
+#   each which is a flattened Stream of Notes and/or Chords   #
+###############################################################
 
-# flatten individual parts to streams of just Notes
-soprano = bach[1].flat.getElementsByClass('Note')
-alto = bach[2].flat.getElementsByClass('Note')
-tenor = bach[3].flat.getElementsByClass('Note')
-bass = bach[4].flat.getElementsByClass('Note')
-
-parts = [soprano, alto, tenor, bass]
-
-# consider only note name, ignore octave and duration
-edges_min = {}
-# distinct node for each note of specific name, octave, and duration
-edges_max = {}
-
-for part in parts:
-  reduced_min = []
-  reduced_max = []
-
-  for i in range(len(part)):
-    n = part[i]
-    reduced_min.append(n.name)
-    reduced_max.append((n.nameWithOctave, n.quarterLength))
-        
-  for j in range(len(part)-1):
-    edge_min = (reduced_min[j], reduced_min[j+1])
-    edges_min[edge_min] = edges_min.get(edge_min, 0) + 1
-        
-    edge_max = (reduced_max[j], reduced_max[j+1])
-    edges_max[edge_max] = edges_max.get(edge_max, 0) + 1
+def scoreToParts(music, reduce_type="both"):
+    score = corpus.parse(music)
+    parts = score.parts
+    numParts = len(parts)
     
-#print edges_min
-#print edges_max
+    note_stream = []
+    
+    for i in range(numParts):
+        if reduce_type == "note":
+            note_stream.append(parts[i].flat.getElementsByClass('Note'))
+        elif reduce_type == "chord":
+            note_stream.append(parts[i].flat.getElementsByClass('Chord'))
+        else:
+            note_stream.append(parts[i].flat.getElementsByClass(['Note', 'Chord']))
+        
+    return note_stream
+  
 
-###################
-# MINIMAL NETWORK #
-###################
-### should make into DiGraph()
+# Given list of parts condensed to notes and chords, generate a list of edges
+# where each node is defined by the given list of properties: 
+#    []
+def musicalEdgeList(parts, properties, part_type="note"):
+    edges = {}
+    
+    for part in parts:
+        reduced = []
+        if part_type == "note":
+            for i in range(len(part)):
+                n = part[i]
+                attr = []
+                
+                if "name" in properties:
+                    attr.append(n.name)
+                if "nameOct" in properties:
+                    attr.append(n.nameWithOctave)
+                if "duration" in properties:
+                    attr.append(n.quarterLength)
+                
+                if len(attr) == 1:
+                    reduced.append(attr[0])
+                else:
+                    reduced.append(tuple(attr))
+            
+        for j in range(len(part)-1):
+            edge = (reduced[j], reduced[j+1])
+            edges[edge] = edges.get(edge, 0) + 1
+    
+    return edges
+            
+  
+def generateNetwork(edges, directed=False, weighted=True):
+  return 0
+
+############################################################################
+
+parts = scoreToParts("bach/bwv57.8")
+
+edges_min = musicalEdgeList(parts, ["name"])
+edges_max = musicalEdgeList(parts, ["nameOct", "duration"])
+
+
+# MINIMAL NETWORK
+# should make into DiGraph()
 G_min = nx.Graph()
 max_occ = max(edges_min.itervalues())
 for key, value in edges_min.iteritems():
@@ -62,9 +92,8 @@ nx.draw_networkx_edges(G_min,pos,edgelist=esmall,width=3,alpha=0.5,edge_color='b
 nx.draw_networkx(G_min, pos, edgelist=[], with_labels=True, node_size=600)
 plt.show()
 
-###################
-# MAXIMAL NETWORK #
-###################
+
+# MAXIMAL NETWORK 
 G_max = nx.Graph()
 for key, value in edges_max.iteritems():
     (note1, note2) = key
