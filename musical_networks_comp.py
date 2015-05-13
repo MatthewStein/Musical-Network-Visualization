@@ -29,9 +29,11 @@ def scoreToParts(music, reduce_type="both"):
     return note_stream
   
 
-# Given list of parts condensed to notes and chords, generate a list of edges
-# where each node is defined by the given list of properties: 
-#    []
+###############################################################
+# Generate a list of edges and frequences of occurence where  #
+#   each node is defined by the given list of properties.     #
+###############################################################
+
 def musicalEdgeList(parts, properties, part_type="note"):
     edges = {}
     
@@ -58,6 +60,10 @@ def musicalEdgeList(parts, properties, part_type="note"):
     
     return edges
 
+###############################################################
+# Draw a network consisting of nodes representing notes or    #
+#  chords and edges as horizontal connections between them.   #
+###############################################################
   
 def generateNetwork(edges, directed=False, weighted=True, (min_width, max_width)=(0.3,1), layout="spring"):
     if directed:
@@ -87,8 +93,8 @@ def generateNetwork(edges, directed=False, weighted=True, (min_width, max_width)
 
 bach = scoreToParts("bach/bwv57.8")
 
-edges_min = musicalEdgeList(bach, ["nameOct"])
+edges_min = musicalEdgeList(bach, ["name"])
 edges_max = musicalEdgeList(bach, ["nameOct", "duration"])
 
-generateNetwork(edges_min, False, True, (0.3,16), layout="spring")
+generateNetwork(edges_min, False, True, (0.3,16), layout="circle")
 #generateNetwork(edges_max, False, True, (0.3,7))
